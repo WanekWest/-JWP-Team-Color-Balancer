@@ -11,6 +11,7 @@
     }
 
 [/SPOILER]
+
 [SPOILER="Ru"]
     "Team_Color_Menu"
     {
