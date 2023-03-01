@@ -3,25 +3,21 @@
 Данный плагин позволяет распределить зэков(террористов) на 2,3,4 команды,с учетом времени,которое будет необходимо Командиру(30 сек,60 сек,120 сек).
 
 
-В jwp_modules.phrases.txt добавить:
-[SPOILER="En"]
+В jwp_modules.phrases.txt добавить (На выбор):
+
     "Team_Color_Menu"
     {
         "en" "Team coloring"
     }
 
-[/SPOILER]
-
-[SPOILER="Ru"]
     "Team_Color_Menu"
     {
         "ru"    "Распределить по командам"
     }
-[/SPOILER]
 
-[SPOILER="warden_menu.txt"]
+В warden_menu.txt добавить:
+
     "teamcolor"
     {
         "flag"  ""
     }
-[/SPOILER]
