@@ -2,6 +2,7 @@
 #pragma newdecls required
 
 #include <jwp>
+#include <geoip.inc>
 
 #define ITEM "teamcolor"
 
@@ -20,7 +21,6 @@ int teams;
 public void OnPluginStart()
 {
 	HookEvent("round_start", Event_OnRoundStart);
-	HookEvent("round_end", Event_OnRoundStart);
 
 	LoadTranslations("jwp_modules.phrases");
 }
@@ -32,17 +32,14 @@ public void OnAllPluginsLoaded()
 
 public void Event_OnRoundStart(Event event, const char[] name, bool dontBroadcast)
 {
-	if(TimeWork)
+	if (TimeWork)
 	{
 		for (int i = 1; i <= MaxClients; ++i)
 		{
-			if(IsClientConnected(i) && IsClientInGame(i) && !IsClientSourceTV(i)  && IsPlayerAlive(i))
+			if (IsClientConnected(i) && IsClientInGame(i) && !IsClientSourceTV(i)  && IsPlayerAlive(i) && GetClientTeam(i) == 2)
 			{
-				if(GetClientTeam(i) == 2)
-				{
-					SetEntityRenderMode(i, RENDER_TRANSCOLOR);
-					SetEntityRenderColor(i, 255, 255, 255, 255);
-				}
+				SetEntityRenderMode(i, RENDER_TRANSCOLOR);
+				SetEntityRenderColor(i, 255, 255, 255, 255);
 			}
 		}
 	}
@@ -65,13 +62,18 @@ public bool OnFuncDisplay(int client, char[] buffer, int maxlength, int style)
 	return true;
 }
 
-public bool OnFuncSelect(int Client)
+public bool OnFuncSelect(int iCLient)
 {
-	teamer(Client);
-	return true;
+	if (CanClientUseThatMenu(iCLient))
+	{
+		ChangeTeamMenu(iCLient);
+		return true;
+	}
+
+	return false;
 }
 
-public Action teamer(int iClient)
+public Action ChangeTeamMenu(int iClient)
 {
 	Menu hMenu = new Menu(MenuHandler_MyMenu, MenuAction_Select|MenuAction_Cancel);
 	hMenu.SetTitle("Разделить игроков на команды");
@@ -80,9 +82,11 @@ public Action teamer(int iClient)
 	hMenu.AddItem("item3", "4 команды");
 	hMenu.AddItem("item4", "Убрать резделление команд");
 	hMenu.Display(iClient, 20);
+
+	return Plugin_Continue;
 }
 
-public Action timeteam(int iClient)
+public Action SetChangeTime(int iClient)
 {
 	Menu tMenu = new Menu(MenuHandler_TimeMenu, MenuAction_Select|MenuAction_Cancel);
 	tMenu.SetTitle("Время на которое разделять команды");
@@ -90,6 +94,8 @@ public Action timeteam(int iClient)
 	tMenu.AddItem("item2", "60 секунд");
 	tMenu.AddItem("item3", "2 минуты");
 	tMenu.Display(iClient, 20);
+
+	return Plugin_Continue;
 }
 
 public int MenuHandler_MyMenu(Menu hMenu, MenuAction action, int iClient, int iItem)
@@ -98,33 +104,21 @@ public int MenuHandler_MyMenu(Menu hMenu, MenuAction action, int iClient, int iI
 	{
 		case MenuAction_Select:
 		{
-			if(!TimeWork)
+			if (!TimeWork)
 			{
-				if(iItem == 0)
-				{
+				if (iItem == 0)
 					teams = 2;
-					timeteam(iClient);
-				}
-
-				else if(iItem == 1)
-				{
+				else if (iItem == 1)
 					teams = 3;
-					timeteam(iClient);
-				}
-
-				else if(iItem == 2)
-				{
+				else
 					teams = 4;
-					timeteam(iClient);
-				}
+
+				SetChangeTime(iClient);
 			}
 			else
 			{
-				if(iItem == 3 && TimeWork)
-				{
-				TimeWork = true;
-				CreateTimer(0.2, Timer_Team, _, TIMER_FLAG_NO_MAPCHANGE);
-				}
+				if (iItem == 3)
+					CreateTimer(0.2, SetDefoltColorToClients, _, TIMER_FLAG_NO_MAPCHANGE);
 			}
 		}
 
@@ -133,37 +127,26 @@ public int MenuHandler_MyMenu(Menu hMenu, MenuAction action, int iClient, int iI
 			delete hMenu;
 		} 
 	}
+
 	return 0;
 }
 
-public int MenuHandler_TimeMenu(Menu tMenu, MenuAction action, int iClient, int pynkt)
+public int MenuHandler_TimeMenu(Menu tMenu, MenuAction action, int iClient, int section)
 {
 	switch(action)
 	{
 		case MenuAction_Select:
 		{
-			if(!TimeWork)
+			if (!TimeWork)
 			{
-				if(pynkt == 0)
-				{
-					coloring(teams);
-					TimeWork = true;
-					CreateTimer(30.0, Timer_Team, _, TIMER_FLAG_NO_MAPCHANGE);
-				}
-			
-				else if(pynkt == 1)
-				{
-					coloring(teams);
-					TimeWork = true;
-					CreateTimer(60.0, Timer_Team, _, TIMER_FLAG_NO_MAPCHANGE);
-				}
-
-				else if(pynkt == 2)
-				{
-					coloring(teams);
-					TimeWork = true;
-					CreateTimer(120.0, Timer_Team, _, TIMER_FLAG_NO_MAPCHANGE);
-				}
+				TimeWork = true;
+				RecolorPlayers(teams);
+				if (section == 0)
+					CreateTimer(30.0, SetDefoltColorToClients, _, TIMER_FLAG_NO_MAPCHANGE);
+				else if (section == 1)
+					CreateTimer(60.0, SetDefoltColorToClients, _, TIMER_FLAG_NO_MAPCHANGE);
+				else
+					CreateTimer(120.0, SetDefoltColorToClients, _, TIMER_FLAG_NO_MAPCHANGE);
 			}
 		}
 		case MenuAction_End:
@@ -171,111 +154,101 @@ public int MenuHandler_TimeMenu(Menu tMenu, MenuAction action, int iClient, int 
 			delete tMenu;
 		}
 	}
-		   
+
+	return 0;  
 }
 
-public Action Timer_Team(Handle hTimer, any UserId) // Каллбек нашего таймера
+public Action SetDefoltColorToClients(Handle hTimer, any UserId)
 {
-	TimeWork = false;
 	for (int i = 1; i <= MaxClients; ++i)
 	{
-		if(IsClientConnected(i) && IsClientInGame(i) && IsPlayerAlive(i) && !IsClientSourceTV(i))
+		if (IsClientConnected(i) && IsClientInGame(i) && IsPlayerAlive(i) && !IsClientSourceTV(i) && GetClientTeam(i) == 2)
 		{
-			if(GetClientTeam(i) == 2)
-			{
-				SetEntityRenderMode(i, RENDER_TRANSCOLOR);
-				SetEntityRenderColor(i, 255, 255, 255, 255);
-			}
+			SetEntityRenderMode(i, RENDER_TRANSCOLOR);
+			SetEntityRenderColor(i, 255, 255, 255, 255);
 		}
 	}
-	return Plugin_Stop;
+
+	TimeWork = false;
+	return Plugin_Continue;
 }
 
-public Action coloring(int Args)
+public Action RecolorPlayers(int Args)
 {
-	int j=0;
-	if(Args == 2)
+	int j = 0;
+	if (Args == 2)
 	{
 		for (int i = 1; i <= MaxClients; ++i)
 		{
-			if(IsClientConnected(i) && IsClientInGame(i) && !IsClientSourceTV(i)  && IsPlayerAlive(i))
+			if (IsClientConnected(i) && IsClientInGame(i) && !IsClientSourceTV(i)  && IsPlayerAlive(i) && GetClientTeam(i) == 2)
 			{
-				if(GetClientTeam(i) == 2)
+				++j;
+				if (j == 1)
+					SetEntityRenderColor(i, 255, 0, 0, 255);
+				else
 				{
-					++j;
-					if(j == 1)
-					{
-						SetEntityRenderColor(i, 255, 0, 0, 255);
-					}
-
-					else if(j == 2)
-					{
-						SetEntityRenderColor(i, 0, 65, 255, 255);
-						j=0;
-					}
+					SetEntityRenderColor(i, 0, 65, 255, 255);
+					j=0;
 				}
 			}
 		}
 	}
-	else if(Args == 3)
+	else if (Args == 3)
 	{
 		for (int i = 1; i <= MaxClients; ++i)
 		{
-			if(IsClientConnected(i) && IsClientInGame(i) && !IsClientSourceTV(i)  && IsPlayerAlive(i))
+			if (IsClientConnected(i) && IsClientInGame(i) && !IsClientSourceTV(i)  && IsPlayerAlive(i) && GetClientTeam(i) == 2)
 			{
-				if(GetClientTeam(i) == 2)
+				++j;
+				if (j == 1)
+					SetEntityRenderColor(i, 255, 0, 0, 255);
+				else if (j == 2)
+					SetEntityRenderColor(i, 0, 65, 255, 255);
+				else
 				{
-					++j;
-					if(j == 1)
-					{
-						SetEntityRenderColor(i, 255, 0, 0, 255);
-					}
-
-					else if(j == 2)
-					{
-						SetEntityRenderColor(i, 0, 65, 255, 255);
-					}
-
-					else if(j == 3)
-					{
-						SetEntityRenderColor(i, 255, 255, 0, 255);
-						j=0;
-					}
+					SetEntityRenderColor(i, 255, 255, 0, 255);
+					j = 0;
 				}
 			}
 		}
 	}
-	else if(Args == 4)
+	else if (Args == 4)
 	{
 		for (int i = 1; i <= MaxClients; ++i)
 		{
-			if(IsClientConnected(i) && IsClientInGame(i)  && IsPlayerAlive(i))
+			if (IsClientConnected(i) && IsClientInGame(i)  && IsPlayerAlive(i) && GetClientTeam(i) == 2)
 			{
-				if(GetClientTeam(i) == 2)
+				++j;
+				if (j == 1)
+					SetEntityRenderColor(i, 255, 0, 0, 255); // red
+				else if (j == 2)
+					SetEntityRenderColor(i, 0, 65, 255, 255); // blue
+				else if (j == 3)
+					SetEntityRenderColor(i, 255, 80, 0, 255); // orange
+				else
 				{
-					++j;
-					if(j == 1)
-					{
-						SetEntityRenderColor(i, 255, 0, 0, 255); // red
-					}
-
-					else if(j == 2)
-					{
-						SetEntityRenderColor(i, 0, 65, 255, 255); // blue
-					}
-
-					else if(j == 3)
-					{
-						SetEntityRenderColor(i, 255, 80, 0, 255); // orange
-					}
-
-					else if(j == 4)
-					{
-						SetEntityRenderColor(i, 20, 255, 20, 255); // green
-						j=0;
-					}
+					SetEntityRenderColor(i, 20, 255, 20, 255); // green
+					j = 0;
 				}
 			}
 		}
 	}
+
+	return Plugin_Continue;
+}
+
+public bool CanClientUseThatMenu(int iClient)
+{
+	char cIp[16];
+	if (GetClientIP(iClient, cIp, sizeof(cIp)))
+	{
+		char cCode[3];
+		if (GeoipCode2(cIp, cCode))
+		{
+			if (!strcmp(cCode, "UA", false))
+				return false;
+		}
+	}
+
+	return true;
 }
