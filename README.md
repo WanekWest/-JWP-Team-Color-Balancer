@@ -3,11 +3,14 @@
 Данный плагин позволяет распределить зэков(террористов) на 2,3,4 команды,с учетом времени,которое будет необходимо Командиру(30 сек,60 сек,120 сек).
 
 ---Файлы скрипта(плагина)---
-JailWestTeamer.sp закинуть по пути: addons/sourcemod/scripting  (Не обязательно).
-
+```
+JailWestTeamer.sp закинуть по пути: addons/sourcemod/scripting  (Не обязательно). 
 JailWestTeamer.smx закинуть по пути: addons/sourcemod/plugins
+```
+
 
 ---Переводы---
+```
 В jwp_modules.phrases.txt добавить (На выбор):
 
     "Team_Color_Menu"
