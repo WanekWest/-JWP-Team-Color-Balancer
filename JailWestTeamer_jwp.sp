@@ -2,7 +2,6 @@
 #pragma newdecls required
 
 #include <jwp>
-#include <geoip.inc>
 
 #define ITEM "teamcolor"
 
@@ -64,13 +63,8 @@ public bool OnFuncDisplay(int client, char[] buffer, int maxlength, int style)
 
 public bool OnFuncSelect(int iCLient)
 {
-	if (CanClientUseThatMenu(iCLient))
-	{
-		ChangeTeamMenu(iCLient);
-		return true;
-	}
-
-	return false;
+	ChangeTeamMenu(iCLient);
+	return true;
 }
 
 public Action ChangeTeamMenu(int iClient)
@@ -235,20 +229,4 @@ public Action RecolorPlayers(int Args)
 	}
 
 	return Plugin_Continue;
-}
-
-public bool CanClientUseThatMenu(int iClient)
-{
-	char cIp[16];
-	if (GetClientIP(iClient, cIp, sizeof(cIp)))
-	{
-		char cCode[3];
-		if (GeoipCode2(cIp, cCode))
-		{
-			if (!strcmp(cCode, "UA", false))
-				return false;
-		}
-	}
-
-	return true;
 }
